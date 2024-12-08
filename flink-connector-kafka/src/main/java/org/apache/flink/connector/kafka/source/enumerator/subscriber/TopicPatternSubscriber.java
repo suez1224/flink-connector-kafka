@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -43,9 +44,9 @@ class TopicPatternSubscriber implements KafkaSubscriber {
     }
 
     @Override
-    public Set<TopicPartition> getSubscribedTopicPartitions(AdminClient adminClient) {
+    public Set<TopicPartition> getSubscribedTopicPartitions(AdminClient adminClient, Properties properties) {
         LOG.debug("Fetching descriptions for all topics on Kafka cluster");
-        final Map<String, TopicDescription> allTopicMetadata = getAllTopicMetadata(adminClient);
+        final Map<String, TopicDescription> allTopicMetadata = getAllTopicMetadata(adminClient, properties);
 
         Set<TopicPartition> subscribedTopicPartitions = new HashSet<>();
 

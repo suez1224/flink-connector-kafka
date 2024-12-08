@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -42,7 +43,7 @@ class PartitionSetSubscriber implements KafkaSubscriber {
     }
 
     @Override
-    public Set<TopicPartition> getSubscribedTopicPartitions(AdminClient adminClient) {
+    public Set<TopicPartition> getSubscribedTopicPartitions(AdminClient adminClient, Properties properties) {
         final Set<String> topicNames =
                 subscribedPartitions.stream()
                         .map(TopicPartition::topic)
@@ -50,7 +51,7 @@ class PartitionSetSubscriber implements KafkaSubscriber {
 
         LOG.debug("Fetching descriptions for topics: {}", topicNames);
         final Map<String, TopicDescription> topicMetadata =
-                getTopicMetadata(adminClient, topicNames);
+                getTopicMetadata(adminClient, topicNames, properties);
 
         Set<TopicPartition> existingSubscribedPartitions = new HashSet<>();
 

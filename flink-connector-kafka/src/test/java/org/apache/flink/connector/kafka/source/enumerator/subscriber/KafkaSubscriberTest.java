@@ -31,6 +31,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -44,6 +45,7 @@ public class KafkaSubscriberTest {
     private static final String TOPIC2 = "pattern-topic";
     private static final TopicPartition NON_EXISTING_TOPIC = new TopicPartition("removed", 0);
     private static AdminClient adminClient;
+    private static Properties properties;
 
     @BeforeClass
     public static void setup() throws Throwable {
@@ -51,6 +53,7 @@ public class KafkaSubscriberTest {
         KafkaSourceTestEnv.createTestTopic(TOPIC1);
         KafkaSourceTestEnv.createTestTopic(TOPIC2);
         adminClient = KafkaSourceTestEnv.getAdminClient();
+        properties = new Properties();
     }
 
     @AfterClass
@@ -65,7 +68,7 @@ public class KafkaSubscriberTest {
         KafkaSubscriber subscriber =
                 KafkaSubscriber.getTopicListSubscriber(Arrays.asList(TOPIC1, TOPIC2));
         final Set<TopicPartition> subscribedPartitions =
-                subscriber.getSubscribedTopicPartitions(adminClient);
+                subscriber.getSubscribedTopicPartitions(adminClient, properties);
 
         final Set<TopicPartition> expectedSubscribedPartitions =
                 new HashSet<>(KafkaSourceTestEnv.getPartitionsForTopics(topics));
@@ -79,7 +82,7 @@ public class KafkaSubscriberTest {
                 KafkaSubscriber.getTopicListSubscriber(
                         Collections.singletonList(NON_EXISTING_TOPIC.topic()));
 
-        assertThatThrownBy(() -> subscriber.getSubscribedTopicPartitions(adminClient))
+        assertThatThrownBy(() -> subscriber.getSubscribedTopicPartitions(adminClient, properties))
                 .isInstanceOf(RuntimeException.class)
                 .satisfies(anyCauseMatches(UnknownTopicOrPartitionException.class));
     }
@@ -89,7 +92,7 @@ public class KafkaSubscriberTest {
         KafkaSubscriber subscriber =
                 KafkaSubscriber.getTopicPatternSubscriber(Pattern.compile("pattern.*"));
         final Set<TopicPartition> subscribedPartitions =
-                subscriber.getSubscribedTopicPartitions(adminClient);
+                subscriber.getSubscribedTopicPartitions(adminClient, properties);
 
         final Set<TopicPartition> expectedSubscribedPartitions =
                 new HashSet<>(
@@ -108,7 +111,7 @@ public class KafkaSubscriberTest {
         KafkaSubscriber subscriber = KafkaSubscriber.getPartitionSetSubscriber(partitions);
 
         final Set<TopicPartition> subscribedPartitions =
-                subscriber.getSubscribedTopicPartitions(adminClient);
+                subscriber.getSubscribedTopicPartitions(adminClient, properties);
 
         assertThat(subscribedPartitions).isEqualTo(partitions);
     }
@@ -120,7 +123,7 @@ public class KafkaSubscriberTest {
                 KafkaSubscriber.getPartitionSetSubscriber(
                         Collections.singleton(nonExistingPartition));
 
-        assertThatThrownBy(() -> subscriber.getSubscribedTopicPartitions(adminClient))
+        assertThatThrownBy(() -> subscriber.getSubscribedTopicPartitions(adminClient, properties))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage(
                         String.format(

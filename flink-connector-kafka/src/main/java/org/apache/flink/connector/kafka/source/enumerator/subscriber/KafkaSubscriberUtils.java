@@ -18,33 +18,60 @@
 
 package org.apache.flink.connector.kafka.source.enumerator.subscriber;
 
+import org.apache.flink.connector.kafka.source.KafkaSourceOptions;
+
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.TopicDescription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 /** The base implementations of {@link KafkaSubscriber}. */
 class KafkaSubscriberUtils {
-
+    private static final Logger LOG = LoggerFactory.getLogger(KafkaSubscriberUtils.class);
     private KafkaSubscriberUtils() {}
 
-    static Map<String, TopicDescription> getAllTopicMetadata(AdminClient adminClient) {
+    static Map<String, TopicDescription> getAllTopicMetadata(AdminClient adminClient, Properties properties) {
         try {
             Set<String> allTopicNames = adminClient.listTopics().names().get();
-            return getTopicMetadata(adminClient, allTopicNames);
+            return getTopicMetadata(adminClient, allTopicNames, properties);
         } catch (Exception e) {
             throw new RuntimeException("Failed to get metadata for all topics.", e);
         }
     }
 
     static Map<String, TopicDescription> getTopicMetadata(
-            AdminClient adminClient, Set<String> topicNames) {
-        try {
-            return adminClient.describeTopics(topicNames).allTopicNames().get();
-        } catch (Exception e) {
-            throw new RuntimeException(
-                    String.format("Failed to get metadata for topics %s.", topicNames), e);
+            AdminClient adminClient, Set<String> topicNames, Properties properties) {
+        int maxRetries = KafkaSourceOptions.getOption(
+                properties, KafkaSourceOptions.TOPIC_METADATA_REQUEST_MAX_RETRY, Integer::parseInt);
+        long retryDelay = KafkaSourceOptions.getOption(
+                properties, KafkaSourceOptions.TOPIC_METADATA_REQUEST_RETRY_INTERVAL_MS, Long::parseLong);
+        for (int attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                return adminClient.describeTopics(topicNames).allTopicNames().get();
+            } catch (Exception e) {
+                if (attempt == maxRetries) {
+                    throw new RuntimeException(
+                            String.format("Failed to get metadata for topics %s.", topicNames), e);
+                } else {
+                    LOG.warn(
+                            "Attempt {} to get metadata for topics {} failed. Retrying in {} ms...",
+                            attempt,
+                            topicNames,
+                            retryDelay);
+                    try {
+                        TimeUnit.MILLISECONDS.sleep(retryDelay);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt(); // Restore interrupted state
+                        LOG.error("Thread was interrupted during retry delay.", ie);
+                    }
+                }
+            }
         }
+        throw new RuntimeException("Failed to get metadata for topics " + topicNames);
     }
 }

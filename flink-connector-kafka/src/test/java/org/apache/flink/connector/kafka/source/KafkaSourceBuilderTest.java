@@ -34,6 +34,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -202,7 +203,7 @@ public class KafkaSourceBuilderTest {
     private static class ExampleCustomSubscriber implements KafkaSubscriber {
 
         @Override
-        public Set<TopicPartition> getSubscribedTopicPartitions(AdminClient adminClient) {
+        public Set<TopicPartition> getSubscribedTopicPartitions(AdminClient adminClient, Properties properties) {
             return Collections.singleton(new TopicPartition("topic", 0));
         }
     }
